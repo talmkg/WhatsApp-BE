@@ -6,6 +6,9 @@ import chatsRouter from "./api/chats/index.js";
 import messagesRouter from "./api/messages/index.js";
 import usersRouter from "./api/users/index.js";
 import createError from "http-errors";
+import { Server } from 'socket.io'
+import http from 'http'
+import { newConnectionHandler } from "./lib/socketio/index.js";
 
 import {
   badRequestHandler,
@@ -15,33 +18,44 @@ import {
 } from "./errHandlers.js";
 
 const port = process.env.PORT || 3001;
-const server = express();
+const app = express();
 
-const accessOrigins = [process.env.FE_DEV_URL]
+const accessOrigins = [process.env.FE_DEV_URL];
 
 const corsOptions = {
   origin: (origin, corsNext) => {
-      console.log(origin)
     if (!origin || accessOrigins.indexOf(origin) !== -1) {
-      corsNext(null, true)
+      corsNext(null, true);
     } else {
-      corsNext(createError(400, `Access to server denied, your origin: ${origin}`))
+      corsNext(
+        createError(400, `Access to server denied, your origin: ${origin}`)
+      );
     }
   },
-}
+};
+//cors
+app.use(cors(corsOptions));
+app.use(express.json());
 
-server.use(cors(corsOptions));
-server.use(express.json());
+app.use("/auth", authRouter);
+app.use("/users", usersRouter);
+app.use("/chats", chatsRouter);
+app.use("/messages", messagesRouter);
 
-server.use("/auth", authRouter);
-server.use("/users", usersRouter);
-server.use("/chats", chatsRouter);
-server.use("/messages", messagesRouter);
+app.use(badRequestHandler);
+app.use(unauthorizedHandler);
+app.use(notFoundHandler);
+app.use(genericErrHandler);
 
-server.use(badRequestHandler);
-server.use(unauthorizedHandler);
-server.use(notFoundHandler);
-server.use(genericErrHandler);
+const server = http.createServer(app)
+
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:3000'
+  }
+})
+
+io.on('connection', newConnectionHandler)
 
 mongoose.connect(process.env.MONGO_URL);
 
