@@ -20,7 +20,7 @@ import {
 const port = process.env.PORT || 3001;
 const app = express();
 
-const accessOrigins = [process.env.FE_DEV_URL];
+const accessOrigins = [process.env.FE_DEV_URL, process.env.FE_PROD_URL];
 
 const corsOptions = {
   origin: (origin, corsNext) => {
@@ -51,7 +51,8 @@ const server = http.createServer(app)
 
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:3000'
+    origin: accessOrigins
+    
   }
 })
 
